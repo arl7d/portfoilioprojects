@@ -1,1 +1,17 @@
+Have created this web scraping script to be able to gather information for real estate in the Philippines
+This was inspired by the available datasets on Kaggle regarding housing prices on other countries and was 
+used to create machine learning models to predict house prices.
 
+Having been born and raised in the Philippines, I wanted to create something similar for real estate there, 
+but after searching online, I am unable to find datasets i can use.
+
+Thus, i have created this web scraping script to gather information from this major real estate website 
+that has listings in places like Mexico, Indonesia & Philippines. It is called "lamudi"
+
+Here's the link: https://www.lamudi.com.ph/
+
+I also have included the output CSV file.
+
+I plan to add more columns/features in the future
+
+Once data is sufficient, i also plan to create a machine learning model to predict housing prices in the Philippines
