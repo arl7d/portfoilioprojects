@@ -7,7 +7,9 @@
 # * Start date: 03-10-2022
 # 
 # ## Scenario: 
-# Bellabeat needs help on their marketing strategy through analysing the publicly available data from non-bellabeat smart devices. We'll be looking into the data available and see what additional features we can add to the device to help increase sales.
+# Bellabeat needs help on their marketing strategy through analysing the publicly 
+#available data from non-bellabeat smart devices. We'll be looking into the data 
+#available and see what additional features we can add to the device to help increase sales.
 # 
 #     
 # ## Below are the deliverables:
@@ -171,10 +173,14 @@ heartrate %>%
 # %% [markdown]
 # ### Insights from summary:
 # 
-# 1. Average total steps only at 7.6k, this is below the number of recommended steps per day for an active lifestyle. Read further on this link: https://www.10000steps.org.au/articles/counting-steps/
-# 2. Average sedentary minutes is at 991. Daily sedentary time of 600 minutes per day or more can increase the risk of chronic disease. Link: https://baptisthealth.net/baptist-health-news/how-much-exercise-will-offset-10-or-more-hours-of-sitting/#:~:text=The%20research%20findings%20based%20on,week%20to%20counter%20sedentary%20behavior.
-# 3. Recommended sleep time is 7 or more hours per day, based on our data, the average sleep time is 419.5 minutes, or roughly 7 hours. https://www.mayoclinic.org/healthy-lifestyle/adult-health/expert-answers/how-many-hours-of-sleep-are-enough/faq-20057898
-# 4. Recommended BMI is 18.5 to 24.9. Looking at our data,  the average is 25.19, which is a little higher than recommended. https://www.medicalnewstoday.com/articles/323446#body-mass-index-bmi
+# 1. Average total steps only at 7.6k, this is below the number of recommended steps per day for an active lifestyle. 
+#     Read further on this link: https://www.10000steps.org.au/articles/counting-steps/
+# 2. Average sedentary minutes is at 991. Daily sedentary time of 600 minutes per day or more can increase the risk 
+#     of chronic disease. Link: https://baptisthealth.net/baptist-health-news/how-much-exercise-will-offset-10-or-more-hours-of-sitting/#:~:text=The%20research%20findings%20based%20on,week%20to%20counter%20sedentary%20behavior.
+# 3. Recommended sleep time is 7 or more hours per day, based on our data, the average sleep time is 419.5 minutes, 
+#     or roughly 7 hours. https://www.mayoclinic.org/healthy-lifestyle/adult-health/expert-answers/how-many-hours-of-sleep-are-enough/faq-20057898
+# 4. Recommended BMI is 18.5 to 24.9. Looking at our data,  the average is 25.19, which is a little higher than recommended. 
+#     https://www.medicalnewstoday.com/articles/323446#body-mass-index-bmi
 
 # %% [markdown]
 # ## Creating additional separate tables:
@@ -310,14 +316,22 @@ geom_col()
 # %% [markdown]
 # ## Recommendations:
 # 
-# 1. Inline with the 10k steps daily goal, it would be good to have an indicator in the smart wearable device if this has been reached. Either through a symbol on the screen, or a certain light indicator in the device.
+# 1. Inline with the 10k steps daily goal, it would be good to have an indicator in the smart wearable device if this has been reached. 
+#     Either through a symbol on the screen, or a certain light indicator in the device.
 # 
-# 2. Regarding sedentary minutes, once the 600 minute daily sedentary mark has been reached, it would be good to have an alert that will notify the user to be more active throughout the day.
+# 2. Regarding sedentary minutes, once the 600 minute daily sedentary mark has been reached, it would be good to have an alert that 
+#     will notify the user to be more active throughout the day.
 # 
-# 3. About sleep time, it would be good to have a sleep notification to help set a routine sleep time for the users, then have an indicator on the device if the minimal 7 hour sleep time has already been reached.
+# 3. About sleep time, it would be good to have a sleep notification to help set a routine sleep time for the users, then have an 
+#     indicator on the device if the minimal 7 hour sleep time has already been reached.
 # 
-# 4. If possible, it would be good if the device would be able to track the least active day of the week, and send notifications during that day to encourage the user to be more active during that day.
+# 4. If possible, it would be good if the device would be able to track the least active day of the week, and send notifications 
+#     during that day to encourage the user to be more active during that day.
 # 
-# 5. We are seeing that the higher the heartrate, the more calories burned. With this, it would be good to have something similar to "mood lighting" on the device and would turn to a color based on the heartrate of the user. With this, while the user is exercising, having a visual feedback of the user's heart rate can be a form of encouragement to continue the high intensity workout, which would burn more calories.
+# 5. We are seeing that the higher the heartrate, the more calories burned. With this, it would be good to have something similar 
+#     to "mood lighting" on the device and would turn to a color based on the heartrate of the user. With this, while the user is 
+#     exercising, having a visual feedback of the user's heart rate can be a form of encouragement to continue the high intensity workout, 
+#      which would burn more calories.
 # 
-# 6. Another good capability of the device is to be able to track the most active time of the day. When this time of the day comes, the device can pop-up a notification for the user to start working out. This can support building a daily workout routine.
+# 6. Another good capability of the device is to be able to track the most active time of the day. When this time of the day comes, 
+#     the device can pop-up a notification for the user to start working out. This can support building a daily workout routine.
