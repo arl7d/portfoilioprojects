@@ -15,3 +15,11 @@ I also have included the output CSV file.
 I plan to add more columns/features in the future
 
 Once data is sufficient, i also plan to create a machine learning model to predict housing prices in the Philippines
+
+Update (3/14/22):
+
+I also have loaded this into Tableau public 
+to create a geographical visualization of house & lots for sale in the Philippines.
+I also have used used color & size to show price differences in a glance of the map
+
+Please check the link: https://public.tableau.com/app/profile/thomas.karlo.blanco/viz/PhilippinesRealEstatePriceMap/PriceMap
