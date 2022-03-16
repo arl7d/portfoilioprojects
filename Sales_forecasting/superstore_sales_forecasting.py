@@ -300,5 +300,5 @@ future_datest_df.tail()
 
 future_df=pd.concat([sales_data,future_datest_df])
 
-future_df['forecast'] = results.predict(start = 44, end = 200, dynamic= True)
+future_df['forecast'] = results.predict(start = 43, end = 200, dynamic= True)
 future_df[['Sales', 'forecast']].plot(figsize=(12, 8))
