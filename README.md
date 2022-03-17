@@ -1,3 +1,8 @@
 # Portfoilio Projects
 
-Here's my collection of projects to showcase my data analytics skills
+Here's my collection of portfolio projects:
+
+1. Cyclistic Data Analysis - Data Analysis in R
+2. Bellabeat Data Analysis - Data Analysis in R
+3. Philippine Real Estate - Web scraping in Python & Visualization in Tableau
+4. Sales Forecasting - using the Superstore dataset in Kaggle to look into trends, and forecast future sales
