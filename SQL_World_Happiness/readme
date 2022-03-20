@@ -1,4 +1,5 @@
 Have downloaded world happiness data from 2015 to 2021 from Kaggle
+(these are 6 different data files)
 then used SQL to do data cleaning, feature engineering and data compilation
 to have a single data file that contains features that are found across
 all the data files, also did some analysis on the data as well
