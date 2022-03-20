@@ -1,0 +1,11 @@
+Have downloaded world happiness data from 2015 to 2021 from Kaggle
+then used SQL to do data cleaning, feature engineering and data compilation
+to have a single data file that contains features that are found across
+all the data files, also did some analysis on the data as well
+
+Major Findings:
+1. Venezuela is the country that degraded the most (in terms of people's happiness). They ranked #23 in 2015, but in 2021, they are now rank #105
+2. Ivory Coast (a country in West Africa), is the one that improved the most, from Rank #151 in 2015, to #83 in 2021 
+
+In addition, i have uploaded the final data output on Kaggle for public use:
+https://www.kaggle.com/datasets/arloblanco/world-happiness-ranks-scores-20152021
