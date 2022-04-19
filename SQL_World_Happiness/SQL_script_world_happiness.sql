@@ -191,3 +191,9 @@ SELECT TOP (1000) [Country]
   FROM [world_happiness].[dbo].[2015_happiness] a
   INNER JOIN [world_happiness].[dbo].[2021_happiness] b ON a.Country = b.Country
   ORDER BY Rank_Delta DESC
+  
+  /*
+  Major Findings:
+	1. Venezuela is the country that degraded the most (in terms of people's happiness). They ranked #23 in 2015, but in 2021, they are now rank #105
+	2. Ivory Coast (a country in West Africa), is the one that improved the most, from Rank #151 in 2015, to #83 in 2021 
+  */
