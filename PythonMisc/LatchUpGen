@@ -1,0 +1,586 @@
+#######################################################################################################
+
+# Latch-up Stress test pin coverage spreadsheet & inputCSV generator
+# Author: Arlo Blanco
+# Date: 2/22/23
+
+# Requirements:
+
+# add jazz design file & sheet name here:
+jazz_design_file = 'j7ahp_jazz_design_0211_pe02.xlsx'
+jazz_design_file_sheet_name = 'Supply Data'
+voltage_profile = 'VmaxSHV33'
+
+# add pinmux file & power sheet name here: (You can get this from PDS)
+pinmux_file = 'J7Quad_Pinmux_v1.1.9.xlsx'
+pinmux_sheet_name = 'AHP Pinmux'
+# for header_row, place here the excel row where headers are found
+pinmux_device_header_num = 2
+
+# add latchup hardware design file here:
+latchup_HW_file = 'J7ahp_LU_x1_June22.xlsx'
+# for header_row, place here the excel row where headers are found
+latchup_HW_file_header_num = 2
+
+# add substrings of pinnames to be disregarded (not bonded out, Supply CAP pins, etc..), inside the bracket below (comma separated):
+discard_substring = ['CAP_','RSVD','VSS','TEMP_DIODE','temp_diode']
+
+# add TDL details here:
+#   - filename
+#   - last state cycle number
+#   - TDL short name
+# place these files on the same folder as the script
+
+# VIH_VIL
+VIH_VIL_TDL_File_name    = 'bscan_vih_vil_fpc.tdl'
+VIL_last_state_cycle_num = 7344
+VIL_last_state_name      = 'VIL'
+VIH_last_state_cycle_num = 3672
+VIH_last_state_name      = 'VIH'
+
+# OutputZ
+OutputZ_TDL_File_name     = 'bscan_outputz_fpc.tdl'
+OutZ_last_state_cycle_num = 5480
+OutZ_last_state_name      = 'OutZ'
+
+# THB_LU
+THB_LU_file_available = False
+THB_Latchup_TDL_File_name = ''
+THB_last_state_name       = ''
+
+# add desired output file names here:
+coverage_output = 'J7AHP_Coverage.xlsx'
+inputcsv_output = 'J7AHP_inputCSV.csv'
+
+# Requirements end here
+
+# Output1: coverage excel file with 3 sheets
+# 1) coverage sheet - showing all pins with their corresponding latch-up stress test coverage
+# 2) percent covered sheet - showing the average percentage latch-up coverage
+# 3) discarded pins sheet - showing pins that does not require latchup
+
+# Output2: inputCSV file to be included in Latch-up test program
+
+#######################################################################################################
+
+import pandas as pd
+import warnings
+warnings.filterwarnings("ignore")
+import sys, os
+
+def tdl_pin_last_state_merger(file_name, last_state_cycle_num, last_state_name):
+    # function to read the TDL and create columns for last states per pin
+
+    global coverage
+
+    print(f'Reading {file_name}')
+    with open(file_name) as f:
+            lines = f.readlines()
+
+    print('Reading pins and transferring to dataframe')
+    for (i, line) in enumerate(lines):
+        if 'CONNECT' in line:
+            pin_list_start = i
+            break
+    for (i2, line) in enumerate(lines):
+        if 'DEFPIN' in line:
+            pin_list_end = i2
+            break
+    TDL_pins = lines[pin_list_start:pin_list_end]
+    TDL_pins[0] = TDL_pins[0][TDL_pins[0].find('(')+1:]
+    TDL_pins[-1] = TDL_pins[-1][:TDL_pins[-1].find(')')]
+    TDL_pins
+    TDL_pins_combined = ""
+    for pin in TDL_pins:
+        pin_cleaned = pin.rstrip().strip()
+        TDL_pins_combined = TDL_pins_combined + pin_cleaned
+    TDL_pins_combined = TDL_pins_combined.replace(" ","")
+    TDL_pins_list = TDL_pins_combined.split(",")
+    TDL_pins_df = pd.DataFrame(TDL_pins_list, columns=['Pin_name'])
+
+    print('Reading last state & transferring to dataframe')
+    for (i, line) in enumerate(lines):
+        if str(last_state_cycle_num) in line:
+            TDL_last_state_cycle_str = line
+    TDL_last_state_cycle_states = TDL_last_state_cycle_str.split("'")[1]
+    TDL_last_state_cycle_states = TDL_last_state_cycle_states.replace("_","")
+    TDL_states_CSV = ""
+    for i in range(len(TDL_last_state_cycle_states)):
+        TDL_states_CSV = TDL_states_CSV + "," + TDL_last_state_cycle_states[i]
+    TDL_states_CSV = TDL_states_CSV[1:]
+    TDL_states_CSV_list = TDL_states_CSV.split(',')
+    TDL_last_state_cycle_states_df = pd.DataFrame(TDL_states_CSV_list, columns=['TDL last state'])
+
+    print('Combining pins & last states')
+    TDL_pin_last_state = TDL_pins_df
+    TDL_pin_last_state[f'{last_state_name} last state'] = TDL_last_state_cycle_states_df['TDL last state']
+    coverage = pd.merge(coverage,TDL_pin_last_state, on = 'Pin_name', how = 'left')
+    return coverage
+    
+def THB_LU_pin_last_state_merger(file_name,last_state_name):
+    # function to read the THB_LU TDL and create columns for last states per pin
+
+    global coverage
+    
+    print(f'Reading {file_name}')
+    with open(file_name) as f:
+            lines = f.readlines()
+
+    print('Reading pins and transferring to dataframe')
+    for (i, line) in enumerate(lines):
+        if 'CONNECT' in line:
+            pin_list_start = i+2
+            break
+    for (i2, line) in enumerate(lines):
+        if 'DEFPIN' in line:
+            pin_list_end = i2-1
+            break
+    TDL_pins = lines[pin_list_start:pin_list_end]
+    TDL_pins[-1] = TDL_pins[-1][:TDL_pins[-1].find(')')]
+    TDL_pins_combined = ""
+    for pin in TDL_pins:
+        pin_cleaned = pin.rstrip().strip()
+        TDL_pins_combined = TDL_pins_combined + pin_cleaned
+    TDL_pins_combined = TDL_pins_combined.replace(" ","")
+    TDL_pins_combined = TDL_pins_combined.replace('"',"")
+    TDL_pins_list = TDL_pins_combined.split(",")
+    TDL_pins_df = pd.DataFrame(TDL_pins_list, columns=['Pin_name'])
+
+    print('Reading last state & transferring to dataframe')
+    setr_linenum_list = []
+    for (i, line) in enumerate(lines):
+        if "SETR" in line:
+            setr_linenum_list.append(i)
+    index_last_setr = setr_linenum_list[-1]
+    TDL_last_state_cycle_str = lines[index_last_setr]
+    TDL_last_state_cycle_states = TDL_last_state_cycle_str.split("'")[1]
+    TDL_last_state_cycle_states = TDL_last_state_cycle_states.replace("_","")
+    TDL_states_CSV = ""
+    for i in range(len(TDL_last_state_cycle_states)):
+        TDL_states_CSV = TDL_states_CSV + "," + TDL_last_state_cycle_states[i]
+    TDL_states_CSV = TDL_states_CSV[1:]
+    TDL_states_CSV_list = TDL_states_CSV.split(',')
+    TDL_last_state_cycle_states_df = pd.DataFrame(TDL_states_CSV_list, columns=['TDL last state'])
+
+    print('Combining pins & last states')
+    TDL_pin_last_state = TDL_pins_df
+    TDL_pin_last_state[f'{last_state_name} last state'] = TDL_last_state_cycle_states_df['TDL last state']
+    coverage = pd.merge(coverage,TDL_pin_last_state, on = 'Pin_name', how = 'left')
+    return coverage
+
+try:
+
+    print('Starting Coverage file & inputCSV file generation')
+    print()
+    print('Reading latchup hardware design file')
+
+    latchup_HW_file_header_row = latchup_HW_file_header_num - 1
+
+    LU_HW_file =  pd.read_excel(latchup_HW_file, header = latchup_HW_file_header_row)
+    LU_HW_file.columns = LU_HW_file.columns.str.lower()
+
+    for i,col in enumerate(LU_HW_file.columns):
+        if 'name' in col:
+            LU_HW_file.columns.values[i] = 'Pin_name'
+            break
+    for i,col in enumerate(LU_HW_file.columns):
+        if 'type' in col:
+            LU_HW_file.columns.values[i] = 'Pin_type'
+            break
+    for i,col in enumerate(LU_HW_file.columns):
+        if 'package' in col:
+            LU_HW_file.columns.values[i] = 'Ball_name'
+            break  
+
+    print('Creating master pinlist for latchup')
+
+    pin_list_master = LU_HW_file[['Pin_name','Pin_type']]
+    pin_list_master = pin_list_master.drop_duplicates()
+    pin_list_master = pin_list_master.rename(columns={'Pin_type':'Pin_class'})
+    pin_list_master.sort_values(by=['Pin_name'], inplace=True)
+    pin_list_master.reset_index(drop=True, inplace=True)
+
+    for ind in pin_list_master.index:
+        if pin_list_master['Pin_class'][ind] == 'SramArray':
+            pin_list_master.at[ind,'Pin_class'] = 'Supply'
+
+    for ind in pin_list_master.index:
+        if pin_list_master['Pin_class'][ind] == 'TestPin':
+            pin_list_master.at[ind,'Pin_class'] = 'Signal'
+
+    for_discard = []
+    for i in pin_list_master.index:
+        for subst in discard_substring:
+            if subst in pin_list_master.loc[i,'Pin_name']:
+                for_discard.append(i)
+    discarded_pins_list = []
+    for num in for_discard:
+        discarded_pins_list.append(pin_list_master.loc[num,'Pin_name'])
+    discarded_pins = pd.DataFrame(discarded_pins_list, columns = ['Discarded_pins'])
+
+    pin_list_for_LU = pin_list_master.drop(for_discard)
+    pin_list_for_LU.sort_values(by=['Pin_class', 'Pin_name'], inplace=True)
+    pin_list_for_LU.reset_index(drop=True, inplace=True)
+
+    print('Reading jazz design file & creating supply voltage list')
+
+    supply_voltage_list =  pd.read_excel(jazz_design_file, sheet_name = jazz_design_file_sheet_name)
+    PkgPin_col = 0
+    for i,col in enumerate(supply_voltage_list.columns):
+        if 'PkgPin' in col:
+            PkgPin_col = i
+            break
+    supply_voltage_list.columns.values[PkgPin_col] = supply_voltage_list.columns[PkgPin_col].split()[0]
+    supply_voltage_list = supply_voltage_list[['Supply','PkgPin',voltage_profile]]
+    supply_voltage_list = supply_voltage_list.rename(columns={'Supply':'Supply_ref','PkgPin':'Ball_name',voltage_profile:'Vmax'})
+    supply_voltage_list.dropna(subset=['Ball_name'], inplace=True)
+    for i in supply_voltage_list.index:
+        if ',' in supply_voltage_list['Ball_name'][i]:
+            supply_voltage_list.at[i,'Ball_name'] = supply_voltage_list['Ball_name'][i].split(',',1)[0]
+    supply_voltage_list['Vmax'] = supply_voltage_list['Vmax'].str.replace('V','')
+    supply_voltage_list = supply_voltage_list.astype({'Vmax':'float'})
+    supply_voltage_list['Vmax'] = supply_voltage_list['Vmax'].round(decimals = 2)
+
+    pin_ball = LU_HW_file[['Pin_name','Ball_name']]
+
+    supply_pin_volts = pd.merge(supply_voltage_list,pin_ball, on = 'Ball_name', how = 'left')
+    supply_pin_volts = supply_pin_volts[['Pin_name','Vmax']]
+    supply_pin_volts = supply_pin_volts.drop_duplicates()
+    supply_pin_volts['Supply'] = supply_pin_volts['Pin_name']
+    supply_pin_volts.reset_index(drop=True, inplace=True)
+
+    print('Creating pinlist for supplies for LU')
+
+    pin_list_supply = pin_list_for_LU[pin_list_for_LU['Pin_class'] == 'Supply']
+    pin_list_supply.reset_index(drop=True, inplace=True)
+
+    pin_list_supply_volts = pd.merge(pin_list_supply,supply_pin_volts, on = 'Pin_name', how = 'left')
+    pin_list_supply_for_LU = pin_list_supply_volts[['Pin_name','Vmax']]
+
+    print('Reading pinmux for power groups & pin types')
+
+    pinmux_device_header_row = pinmux_device_header_num - 1
+
+    pinmux =  pd.read_excel(pinmux_file, sheet_name = pinmux_sheet_name, header = pinmux_device_header_row)
+
+    pinlist = pinmux[['Package Signal Name','Operating Voltage','Mode0 Functional Direction']]
+    pinlist.dropna(subset=['Package Signal Name'],inplace=True)
+    nan_sig_dir = {"Mode0 Functional Direction": "IO"}
+    pinlist.fillna(value=nan_sig_dir, inplace=True)
+    pinlist['Operating Voltage'] = pinlist['Operating Voltage'].str.replace(' V','')
+    pinlist["Vmax"] = ""
+    for ind in pinlist.index:
+        pinlist.at[ind,'Vmax'] = float(pinlist['Operating Voltage'].str.split("/")[ind][-1])*1.05
+
+    pinlist = pinlist.rename(columns={'Package Signal Name':'Pin_name','Mode0 Functional Direction':'Pin_type'})
+    coverage = pinlist[['Pin_name','Vmax','Pin_type']]
+    coverage['Pin_name'] = coverage['Pin_name'].str.lower()
+    coverage.sort_values(by=['Pin_name'], inplace=True)
+    coverage.reset_index(drop=True, inplace=True)
+
+    print('Creating VIL last states column')
+
+    tdl_pin_last_state_merger(VIH_VIL_TDL_File_name, VIL_last_state_cycle_num, VIL_last_state_name)
+
+    print('Creating VIH last states column')
+
+    tdl_pin_last_state_merger(VIH_VIL_TDL_File_name, VIH_last_state_cycle_num, VIH_last_state_name)
+
+    print('Creating OutZ last states column')
+
+    tdl_pin_last_state_merger(OutputZ_TDL_File_name, OutZ_last_state_cycle_num, OutZ_last_state_name)
+
+    print('Creating THB_LU last states column')
+    
+    if THB_LU_file_available == True:
+        THB_LU_pin_last_state_merger(THB_Latchup_TDL_File_name,THB_last_state_name)
+
+    print('Checking which pins to be tested for IL')
+
+    coverage['IL_VIL'] = ''
+    for ind in coverage.index:
+        if (coverage['Pin_type'][ind].find('I')>=0 or coverage['Pin_type'][ind].find('A')>=0) and (coverage['VIL last state'][ind]=="L" or coverage['VIL last state'][ind]=="Y") :
+            coverage.at[ind,'IL_VIL'] = 1
+        else:
+            coverage.at[ind,'IL_VIL'] = 0
+
+    if THB_LU_file_available == True:
+
+        coverage['IL_THB'] = ''
+        for ind in coverage.index:
+            if (coverage['Pin_type'][ind].find('I')>=0 or coverage['Pin_type'][ind].find('A')>=0) and (coverage['THB last state'][ind]=="L" or coverage['THB last state'][ind]=="Y") and coverage['IL_VIL'][ind]==0:
+                coverage.at[ind,'IL_THB'] = 1
+            else:
+                coverage.at[ind,'IL_THB'] = 0
+
+    print('Checking which pins to be tested for IH')
+
+    coverage['IH_VIH'] = ''
+    for ind in coverage.index:
+        if (coverage['Pin_type'][ind].find('I')>=0 or coverage['Pin_type'][ind].find('A')>=0) and (coverage['VIH last state'][ind]=="H" or coverage['VIH last state'][ind]=="Y") :
+            coverage.at[ind,'IH_VIH'] = 1
+        else:
+            coverage.at[ind,'IH_VIH'] = 0
+
+    if THB_LU_file_available == True:
+
+        coverage['IH_THB'] = ''
+        for ind in coverage.index:
+            if (coverage['Pin_type'][ind].find('I')>=0 or coverage['Pin_type'][ind].find('A')>=0) and (coverage['THB last state'][ind]=="H" or coverage['THB last state'][ind]=="Y") and coverage['IH_VIH'][ind]==0:
+                coverage.at[ind,'IH_THB'] = 1
+            else:
+                coverage.at[ind,'IH_THB'] = 0
+
+    print('Checking which pins to be tested for OL')
+
+    coverage['OL_OutZ'] = ''
+    for ind in coverage.index:
+        if (coverage['Pin_type'][ind].find('O')>=0 or coverage['Pin_type'][ind].find('A')>=0) and (coverage['OutZ last state'][ind]=="Z" or coverage['OutZ last state'][ind]=='M' or coverage['OutZ last state'][ind]=='0') :
+            coverage.at[ind,'OL_OutZ'] = 1
+        else:
+            coverage.at[ind,'OL_OutZ'] = 0
+
+    if THB_LU_file_available == True:
+
+        coverage['OL_THB'] = ''
+        for ind in coverage.index:
+            if (coverage['Pin_type'][ind].find('O')>=0 or coverage['Pin_type'][ind].find('A')>=0) and (coverage['THB last state'][ind]=="Z" or coverage['THB last state'][ind]=='M' or coverage['THB last state'][ind]=='0') and coverage['OL_OutZ'][ind]==0:
+                coverage.at[ind,'OL_THB'] = 1
+            else:
+                coverage.at[ind,'OL_THB'] = 0
+
+    print('Checking which pins to be tested for OH')
+
+    coverage['OH_OutZ'] = ''
+    for ind in coverage.index:
+        if (coverage['Pin_type'][ind].find('O')>=0 or coverage['Pin_type'][ind].find('A')>=0) and (coverage['OutZ last state'][ind]=="Z" or coverage['OutZ last state'][ind]=='M' or coverage['OutZ last state'][ind]=='1') :
+            coverage.at[ind,'OH_OutZ'] = 1
+        else:
+            coverage.at[ind,'OH_OutZ'] = 0
+
+    if THB_LU_file_available == True:
+
+        coverage['OH_THB'] = ''
+        for ind in coverage.index:
+            if (coverage['Pin_type'][ind].find('O')>=0 or coverage['Pin_type'][ind].find('A')>=0) and (coverage['THB last state'][ind]=="Z" or coverage['THB last state'][ind]=='1' or coverage['THB last state'][ind]=='M') and coverage['OH_OutZ'][ind]==0:
+                coverage.at[ind,'OH_THB'] = 1
+            else:
+                coverage.at[ind,'OH_THB'] = 0
+
+    print('Checking total IL coverage')
+
+    new_columns = ['IL','IH','OL','OH']
+    for col in new_columns:
+        coverage[col] = ''
+
+    if THB_LU_file_available == True:
+
+        for ind in coverage.index:
+            if coverage['IL_VIL'][ind]==1 or coverage['IL_THB'][ind]==1:
+                coverage.at[ind,'IL'] = 1
+            else:
+                coverage.at[ind,'IL'] = 0
+    
+    else:
+
+        for ind in coverage.index:
+            if coverage['IL_VIL'][ind]==1:
+                coverage.at[ind,'IL'] = 1
+            else:
+                coverage.at[ind,'IL'] = 0
+
+    print('Checking total IH coverage')
+
+    if THB_LU_file_available == True:
+
+        for ind in coverage.index:
+            if coverage['IH_VIH'][ind]==1 or coverage['IH_THB'][ind]==1:
+                coverage.at[ind,'IH'] = 1
+            else:
+                coverage.at[ind,'IH'] = 0
+
+    else:
+
+        for ind in coverage.index:
+            if coverage['IH_VIH'][ind]==1:
+                coverage.at[ind,'IH'] = 1
+            else:
+                coverage.at[ind,'IH'] = 0
+
+    print('Checking total OL coverage')
+
+    if THB_LU_file_available == True:
+
+        for ind in coverage.index:
+            if coverage['OL_OutZ'][ind]==1 or coverage['OL_THB'][ind]==1:
+                coverage.at[ind,'OL'] = 1
+            else:
+                coverage.at[ind,'OL'] = 0
+    
+    else:
+
+        for ind in coverage.index:
+            if coverage['OL_OutZ'][ind]==1:
+                coverage.at[ind,'OL'] = 1
+            else:
+                coverage.at[ind,'OL'] = 0
+
+    print('Checking total OH coverage')
+
+    if THB_LU_file_available == True:
+
+        for ind in coverage.index:
+            if coverage['OH_OutZ'][ind]==1 or coverage['OH_THB'][ind]==1:
+                coverage.at[ind,'OH'] = 1
+            else:
+                coverage.at[ind,'OH'] = 0
+
+    else:
+
+        for ind in coverage.index:
+            if coverage['OH_OutZ'][ind]==1:
+                coverage.at[ind,'OH'] = 1
+            else:
+                coverage.at[ind,'OH'] = 0
+
+    print('Computing for Max coverage based on pintype')
+
+    coverage["Max Coverage"] = ""
+
+    fifty = ['I','O']
+    hundred = ['A']
+
+    for ind in coverage.index:
+        max_coverage = 0
+        for pin_type in fifty:
+            if pin_type in coverage.loc[ind,'Pin_type']:
+                max_coverage += 50
+        for pin_type in hundred:
+            if pin_type in coverage.loc[ind,'Pin_type']:
+                max_coverage = 100
+        coverage.at[ind,'Max Coverage'] = max_coverage
+
+    print('Computing for Actual coverage based on coverage per state & current flow')
+
+    coverage["Actual Coverage"] = ""
+    for ind in coverage.index:
+        coverage.at[ind,'Actual Coverage'] = (coverage['IL'][ind]+coverage['IH'][ind]+coverage['OL'][ind]+coverage['OH'][ind])*25
+
+    print('Computing Final coverage based on actual & max coverage')
+
+    coverage["Final Coverage"] = ""
+    for ind in coverage.index:
+        comp_cov = (coverage.loc[ind,'Actual Coverage'] / coverage.loc[ind,'Max Coverage'])*100
+        if comp_cov > 100:
+            comp_cov = 100
+        coverage.at[ind,'Final Coverage'] = comp_cov
+
+    print('Adding comments for pins that have zero coverage')
+
+    coverage["Comments"] = ""
+    for ind in coverage.index:
+        if coverage['Final Coverage'][ind]==0:
+            coverage.at[ind,'Comments'] = 'no DC_PARA capability to control IO state of pin'
+
+    print('Setting coverage for supply pins')
+
+    coverage_supply = pin_list_supply_for_LU
+    coverage_supply['Pin_type'] = 'P'
+    coverage_supply['Final Coverage'] = 100
+
+    print('Combining IO pins & supply pin coverage dataframes')
+
+    pin_group = [coverage,coverage_supply]
+    coverage_all = pd.concat(pin_group, sort=False)
+    coverage_all.reset_index(drop=True, inplace=True)
+
+    print('Calculating percent coverage')
+
+    percent_covered = pd.DataFrame()
+    percent_covered.at[0,'Percent_Covered'] = coverage_all['Final Coverage'].mean()
+
+    print('Writing coverage df to excel file, along with sheets for percent coverage & discarded pin list')
+
+    with pd.ExcelWriter(coverage_output) as writer:
+
+        coverage_all.to_excel(writer, index=False, sheet_name='Coverage')
+        percent_covered.to_excel(writer, index=False, sheet_name='Percent Covered')
+        discarded_pins.to_excel(writer, index=False, sheet_name='Discarded Pins')
+
+    print('Creating inputCSV file with pinname, vmax & supplylist')
+
+    inputCSV = coverage_all[['Pin_name','Vmax']]
+    inputCSV = inputCSV.rename(columns={'Pin_name':'All_Pins'})
+    inputCSV['SupplyList'] = coverage_supply['Pin_name']
+
+    print('Creating a list of tdl groups and adding needed strings for crosschecking')
+
+    if THB_LU_file_available == True:
+
+        tdl_names = [VIL_last_state_name,VIH_last_state_name,OutZ_last_state_name,THB_last_state_name]
+        tdl_name_last_state = []
+        for name in tdl_names:
+            name_last = name + ' last state'
+            tdl_name_last_state.append(name_last)
+    else:
+        tdl_names = [VIL_last_state_name,VIH_last_state_name,OutZ_last_state_name]
+        tdl_name_last_state = []
+        for name in tdl_names:
+            name_last = name + ' last state'
+            tdl_name_last_state.append(name_last)
+
+
+    print('Checking which headers from the coverage file we will need to create pinlist for LU')
+
+    header_for_LU = []
+    header_str_for_LU = ['IL_','IH_','OL_','OH_']
+    for header in header_str_for_LU:
+        for col in coverage_all.columns:
+            if header in col:
+                header_for_LU.append(col)
+
+    print('Creating pinlist columns for all current(I) LU tests in inputCSV file & corresponding Disconnect list')
+
+    for header in header_for_LU:
+        DISC_list = []
+        pinlist_for_LU = []
+        for ind in coverage_all.index:
+            if coverage_all[header][ind]==1:
+                pinlist_for_LU.append(coverage_all['Pin_name'][ind])
+        pinlist_for_LU_df = pd.DataFrame(pinlist_for_LU, columns=['LU_pins'])
+        inputCSV[header.split("_")[0]+'SRC_'+header.split("_")[1]] = pinlist_for_LU_df['LU_pins']
+        LS_Check = header.split("_")[-1]+" last state"
+        for ind in coverage_all.index:
+            if coverage_all[LS_Check][ind]=="0" or coverage_all[LS_Check][ind]=="1" or coverage_all[LS_Check][ind]=="M":
+                DISC_list.append(coverage_all['Pin_name'][ind])
+        DISC_list_df = pd.DataFrame(DISC_list, columns=['DISC_list'])
+        inputCSV["DISC_"+header.split("_")[0]+'SRC_'+header.split("_")[1]] = DISC_list_df['DISC_list']
+        inputCSV[header.split("_")[0]+'SNK_'+header.split("_")[1]] = pinlist_for_LU_df['LU_pins']
+        inputCSV["DISC_"+header.split("_")[0]+'SNK_'+header.split("_")[1]] = DISC_list_df['DISC_list']
+
+    print('Adding supply list for voltage LU tests in inputCSV')
+
+    inputCSV['VTIL_OutZ'] = inputCSV['SupplyList']
+    inputCSV['VTIL_DISC'] = ""
+    inputCSV['VTIH_OutZ'] = inputCSV['SupplyList']
+    inputCSV['VTIH_DISC'] = ""
+
+    print('Writing inputCSV df to csv file')
+
+    inputCSV.to_csv(inputcsv_output, index=False)
+    print()
+    print(f'{coverage_output} and {inputcsv_output} successfully written to a file.')
+
+    print()
+    input('Press ENTER to exit')
+
+except Exception as e:
+    print()
+    print("Error encountered")
+    exc_type, exc_obj, exc_tb = sys.exc_info()
+    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+    print(f'Error type: {exc_type}')
+    print(f'Filename: {fname}')
+    print(f'Line number: {exc_tb.tb_lineno}')
+    input('\nPress key to exit.') 
+    exit()
